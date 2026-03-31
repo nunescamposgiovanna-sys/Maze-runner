@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maze Runner: PRO MAX</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root{
+      --bg-1:#07110d;
+      --bg-2:#0d1813;
+      --bg-3:#122019;
+      --panel:rgba(255,255,255,.07);
+      --panel-2:rgba(255,255,255,.05);
+      --stroke:rgba(205,255,220,.12);
+      --text:#eefbf2;
+      --muted:#c2d9cb;
+      --green-1:#7df0b2;
+      --green-2:#43b97b;
+      --green-3:#173427;
+      --gold:#dfff9c;
+      --danger:#ffcf86;
+      --shadow:0 18px 55px rgba(0,0,0,.38);
+      --radius:24px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body{
+      margin:0;
+      font-family:Arial, sans-serif;
+      color:var(--text);
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(125,240,178,.08), transparent 22%),
+        radial-gradient(circle at 90% 20%, rgba(223,255,156,.05), transparent 20%),
+        radial-gradient(circle at 50% 90%, rgba(125,240,178,.04), transparent 25%),
+        linear-gradient(180deg,var(--bg-1),var(--bg-2),var(--bg-3),#08100c);
+      overflow-x:hidden;
+      position:relative;
+    }
+
+    /* linhas de labirinto */
+    .maze-overlay{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      opacity:.12;
+      background:
+        linear-gradient(90deg, transparent 0 6%, rgba(255,255,255,.18) 6% 6.18%, transparent 6.18% 18%, rgba(255,255,255,.12) 18% 18.12%, transparent 18.12% 100%),
+        linear-gradient(0deg, transparent 0 8%, rgba(255,255,255,.15) 8% 8.15%, transparent 8.15% 22%, rgba(255,255,255,.10) 22% 22.14%, transparent 22.14% 100%);
+      mix-blend-mode:screen;
+    }
+
+    .fog{
+      position:fixed;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      opacity:.3;
+      background:
+        radial-gradient(circle at 20% 35%, rgba(255,255,255,.08), transparent 18%),
+        radial-gradient(circle at 80% 30%, rgba(255,255,255,.06), transparent 18%),
+        radial-gradient(circle at 50% 78%, rgba(255,255,255,.05), transparent 20%);
+      animation:fogDrift 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes fogDrift{
+      from{ transform:translateY(0) scale(1); }
+      to{ transform:translateY(-10px) scale(1.03); }
+    }
+
+    .container{
+      position:relative;
+      z-index:2;
+      max-width:1240px;
+      margin:0 auto;
+      padding:24px 18px 44px;
+    }
+
+    .hero{
+      text-align:center;
+      margin-top:10px;
+      margin-bottom:22px;
+    }
+
+    .hero-badge{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--stroke);
+      color:var(--muted);
+      font-size:14px;
+      margin-bottom:16px;
+    }
+
+    h1{
+      margin:0 0 10px;
+      font-size:clamp(2.4rem, 6vw, 5rem);
+      letter-spacing:2px;
+      text-shadow:0 0 18px rgba(125,240,178,.12);
+    }
+
+    .subtitle{
+      margin:0 auto;
+      max-width:800px;
+      color:var(--muted);
+      font-size:1rem;
+      line-height:1.8;
+    }
+
+    .intro-card{
+      margin:24px auto 0;
+      max-width:930px;
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border:1px solid var(--stroke);
+      border-radius:26px;
+      padding:22px;
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .intro-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at center, rgba(125,240,178,.08), transparent 55%);
+      pointer-events:none;
+    }
+
+    .intro-line{
+      position:relative;
+      z-index:1;
+      color:#f0fff5;
+      line-height:1.9;
+      font-size:1.02rem;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:20px;
+      margin-top:26px;
+    }
+
+    @media (max-width: 980px){
+      .layout{ grid-template-columns:1fr; }
+    }
+
+    .panel{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--stroke);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:22px;
+      backdrop-filter:blur(8px);
+    }
+
+    .section-title{
+      margin:0 0 14px;
+      font-size:1.08rem;
+      color:#f4fff7;
+    }
+
+    .setup-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
+
+    @media (max-width:760px){
+      .setup-grid{ grid-template-columns:1fr; }
+    }
+
+    .box{
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .options{
+      display:grid;
+      gap:10px;
+    }
+
+    .choice{
+      width:100%;
+      text-align:left;
+      padding:14px 15px;
+      border:none;
+      border-radius:15px;
+      background:rgba(255,255,255,.07);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+      transition:.22s ease;
+      font-size:15px;
+    }
+
+    .choice:hover{
+      transform:translateY(-2px);
+      background:rgba(125,240,178,.15);
+      border-color:rgba(255,255,255,.18);
+    }
+
+    .choice.active{
+      background:linear-gradient(180deg, rgba(125,240,178,.22), rgba(67,185,123,.18));
+      border-color:rgba(223,255,156,.22);
+      box-shadow:0 12px 24px rgba(125,240,178,.10);
+      color:#f7fff9;
+    }
+
+    .film-preview{
+      margin-top:16px;
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--muted);
+      line-height:1.7;
+      min-height:110px;
+    }
+
+    .buttons{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .btn-main, .btn-sec{
+      padding:14px 18px;
+      border:none;
+      border-radius:14px;
+      font-weight:bold;
+      cursor:pointer;
+      transition:.2s ease;
+      font-size:15px;
+    }
+
+    .btn-main{
+      background:linear-gradient(180deg, #b8ffd4, #56bb80);
+      color:#0b1a12;
+      box-shadow:0 14px 30px rgba(125,240,178,.16);
+    }
+
+    .btn-main:hover{ transform:translateY(-2px); }
+
+    .btn-sec{
+      background:rgba(255,255,255,.10);
+      color:#fff;
+    }
+
+    .btn-sec:hover{
+      background:rgba(255,255,255,.16);
+    }
+
+    .status-row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:14px;
+      margin-bottom:10px;
+    }
+
+    .progress{
+      width:100%;
+      height:11px;
+      border-radius:999px;
+      overflow:hidden;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.06);
+      margin-bottom:18px;
+    }
+
+    .progress-bar{
+      width:0%;
+      height:100%;
+      background:linear-gradient(90deg, var(--green-2), var(--gold));
+      transition:.35s ease;
+    }
+
+    .film-box{
+      margin-bottom:16px;
+      padding:14px 15px;
+      border-radius:16px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--muted);
+      line-height:1.7;
+    }
+
+    .question{
+      font-size:clamp(1.28rem, 3vw, 2rem);
+      line-height:1.45;
+      margin-bottom:16px;
+      font-weight:bold;
+    }
+
+    .answers{
+      display:grid;
+      gap:12px;
+    }
+
+    .answers button{
+      width:100%;
+      padding:15px;
+      border-radius:15px;
+      border:none;
+      background:rgba(255,255,255,.08);
+      color:white;
+      text-align:left;
+      font-size:15px;
+      cursor:pointer;
+      transition:.22s ease;
+    }
+
+    .answers button:hover{
+      transform:translateY(-2px);
+      background:rgba(125,240,178,.15);
+    }
+
+    .result-card{
+      text-align:center;
+      padding:26px;
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border:1px solid rgba(255,255,255,.10);
+    }
+
+    .result-icon{
+      font-size:54px;
+      margin-bottom:10px;
+    }
+
+    .result-title{
+      margin:0 0 10px;
+      font-size:clamp(1.9rem, 4vw, 2.8rem);
+    }
+
+    .result-text{
+      margin:0 auto 14px;
+      max-width:760px;
+      color:var(--muted);
+      line-height:1.8;
+      font-size:1rem;
+    }
+
+    .traits{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+
+    .trait{
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:14px;
+    }
+
+    /* sidebar */
+    .side-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+
+    .signal{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:var(--green-1);
+      box-shadow:0 0 14px rgba(125,240,178,.75);
+      animation:pulse 1.6s infinite;
+    }
+
+    @keyframes pulse{
+      0%{ transform:scale(1); opacity:1; }
+      50%{ transform:scale(1.35); opacity:.65; }
+      100%{ transform:scale(1); opacity:1; }
+    }
+
+    .cast-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+
+    @media (max-width:520px){
+      .cast-grid{ grid-template-columns:1fr; }
+    }
+
+    .cast-card{
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      overflow:hidden;
+      transition:.22s ease;
+      cursor:pointer;
+    }
+
+    .cast-card:hover{
+      transform:translateY(-3px);
+      border-color:rgba(223,255,156,.20);
+    }
+
+    .cast-photo{
+      height:180px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.08)),
+        radial-gradient(circle at 50% 35%, rgba(125,240,178,.18), transparent 30%),
+        linear-gradient(180deg, #10231b, #193126, #0d1713);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .cast-photo::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(90deg, transparent 0 14%, rgba(255,255,255,.07) 14% 14.2%, transparent 14.2% 42%, rgba(255,255,255,.05) 42% 42.15%, transparent 42.15% 100%);
+      opacity:.4;
+    }
+
+    .photo-circle{
+      width:92px;
+      height:92px;
+      border-radius:50%;
+      border:2px solid rgba(223,255,156,.28);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:34px;
+      font-weight:bold;
+      color:#f5fff8;
+      background:rgba(255,255,255,.07);
+      box-shadow:0 0 24px rgba(125,240,178,.12);
+      z-index:1;
+    }
+
+    .cast-info{
+      padding:12px;
+    }
+
+    .cast-name{
+      font-weight:bold;
+      margin-bottom:4px;
+    }
+
+    .cast-role{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .bio-panel{
+      margin-top:16px;
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      min-height:220px;
+    }
+
+    .bio-panel h4{
+      margin:0 0 8px;
+      font-size:1.1rem;
+    }
+
+    .bio-meta{
+      color:#dfffb0;
+      font-size:14px;
+      margin-bottom:10px;
+    }
+
+    .bio-text{
+      color:var(--muted);
+      line-height:1.75;
+      font-size:15px;
+    }
+
+    .bio-tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:14px;
+    }
+
+    .bio-tag{
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:13px;
+    }
+
+    .footer-note{
+      margin-top:18px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+      opacity:.92;
+    }
+
+    .quiz-screen, .result-screen{
+      display:none;
+      margin-top:18px;
+    }
+
+    .hidden{ display:none !important; }
+  </style>
+</head>
+<body>
+  <div class="maze-overlay"></div>
+  <div class="fog"></div>
+
+  <div class="container">
+    <section class="hero">
+      <div class="hero-badge">🧩 trilogia • bios • quiz • um único index.html</div>
+      <h1>MAZE RUNNER: PRO MAX</h1>
+      <p class="subtitle">
+        Escolha o filme, escolha o modo e descubra seu destino nesse universo. E sim:
+        agora também dá para explorar as biografias dos personagens em uma área própria
+        no mesmo site.
+      </p>
+
+      <div class="intro-card">
+        <div class="intro-line">
+          Você sobe pelo elevador. As paredes se abrem. O grupo observa.<br><br>
+          Antes de correr, você precisa decidir: <strong>sobreviver</strong>, descobrir
+          seu <strong>perfil</strong> ou entender qual seria sua <strong>função no grupo</strong>.
+          Depois disso, ainda pode abrir a base de personagens e explorar quem é quem.
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <div id="setupScreen">
+          <div class="setup-grid">
+            <div class="box">
+              <h3 class="section-title">🎬 Escolha o filme</h3>
+              <div class="options" id="filmOptions"></div>
+            </div>
+
+            <div class="box">
+              <h3 class="section-title">⚡ Escolha o modo</h3>
+              <div class="options" id="modeOptions">
+                <button class="choice active" data-mode="survive">Você sobreviveria?</button>
+                <button class="choice" data-mode="personality">Seu perfil no universo Maze Runner</button>
+                <button class="choice" data-mode="role">Qual seria sua função no grupo?</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="film-preview" id="filmPreview"></div>
+
+          <div class="buttons">
+            <button class="btn-main" onclick="startGame()">Entrar no labirinto</button>
+            <button class="btn-sec" onclick="randomizeChoices()">Escolha aleatória</button>
+            <button class="btn-sec" onclick="scrollToBios()">Ver personagens</button>
+          </div>
+        </div>
+
+        <div class="quiz-screen" id="quizScreen">
+          <div class="status-row">
+            <span id="questionCounter">Pergunta 1 de 6</span>
+            <span id="modeLabel">Modo: Você sobreviveria?</span>
+          </div>
+
+          <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+
+          <div class="film-box" id="filmBox"></div>
+          <div class="question" id="questionText"></div>
+          <div class="answers" id="answersBox"></div>
+
+          <div class="buttons">
+            <button class="btn-sec" onclick="backToMenu()">Voltar</button>
+          </div>
+        </div>
+
+        <div class="result-screen" id="resultScreen">
+          <div class="result-card">
+            <div class="result-icon" id="resultIcon">🌿</div>
+            <h2 class="result-title" id="resultTitle"></h2>
+            <p class="result-text" id="resultText"></p>
+            <div class="traits" id="traitsBox"></div>
+
+            <div class="buttons">
+              <button class="btn-main" onclick="restartAll()">Jogar de novo</button>
+              <button class="btn-sec" onclick="copyResult()">Copiar resultado</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          Visual inspirado no clima do primeiro filme: concreto, neblina, verde escuro e tensão.
+        </div>
+      </section>
+
+      <aside class="panel" id="biosSection">
+        <div class="side-header">
+          <h3 class="section-title" style="margin:0;">🗂️ Base de personagens</h3>
+          <div class="signal">
+            <span class="dot"></span>
+            arquivo aberto
+          </div>
+        </div>
+
+        <div class="cast-grid" id="castGrid"></div>
+
+        <div class="bio-panel" id="bioPanel">
+          <h4>Selecione um personagem</h4>
+          <div class="bio-meta">Clique em um card para abrir a biografia.</div>
+          <div class="bio-text">
+            Aqui vão aparecer a descrição, a função narrativa, o jeito da personagem e em quais filmes ela ganha mais destaque.
+          </div>
+          <div class="bio-tags"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const films = {
+      1: {
+        name: "Maze Runner: Correr ou Morrer",
+        short: "Filme 1",
+        description: "O início da trilogia: a Clareira, o Labirinto, as regras do grupo e a busca desesperada por uma saída."
+      },
+      2: {
+        name: "Maze Runner: Prova de Fogo",
+        short: "Filme 2",
+        description: "O mundo externo entra em cena com muito mais instabilidade, pressão, fuga e adaptação."
+      },
+      3: {
+        name: "Maze Runner: A Cura Mortal",
+        short: "Filme 3",
+        description: "A fase mais intensa e emocional da trilogia, com resgate, confronto e peso maior nas escolhas."
+      }
+    };
+
+    const characters = [
+      {
+        id: "thomas",
+        name: "Thomas",
+        actor: "Dylan O'Brien",
+        initials: "T",
+        role: "Protagonista",
+        bio: "Thomas é o centro da trilogia. Ele entra na Clareira sem memória e rapidamente mostra impulso para agir, curiosidade, coragem e vontade de entender o sistema ao redor. Ao longo dos filmes, vira o motor das decisões mais arriscadas e também das tentativas de resgate.",
+        tags: ["liderança", "coragem", "impulso", "protagonismo"],
+        films: "1 • 2 • 3"
+      },
+      {
+        id: "teresa",
+        name: "Teresa",
+        actor: "Kaya Scodelario",
+        initials: "Te",
+        role: "Figura central e ambígua",
+        bio: "Teresa ocupa um lugar importante na trama desde o início. Ela tem ligação direta com os grandes mistérios da história e carrega uma energia mais reservada, estratégica e emocionalmente complexa. Sua presença mexe com a confiança do grupo e com o rumo da narrativa.",
+        tags: ["mistério", "estratégia", "complexidade", "ligação com a trama"],
+        films: "1 • 2 • 3"
+      },
+      {
+        id: "newt",
+        name: "Newt",
+        actor: "Thomas Brodie-Sangster",
+        initials: "N",
+        role: "Equilíbrio do grupo",
+        bio: "Newt é um dos personagens mais humanos e afetivos da trilogia. Ele funciona como ponte entre decisão prática e sensibilidade, sendo alguém que ajuda a manter o grupo unido e menos caótico. Sua presença traz equilíbrio, lealdade e maturidade emocional.",
+        tags: ["lealdade", "sensibilidade", "equilíbrio", "amizade"],
+        films: "1 • 2 • 3"
+      },
+      {
+        id: "minho",
+        name: "Minho",
+        actor: "Ki Hong Lee",
+        initials: "M",
+        role: "Runner principal",
+        bio: "Minho representa velocidade, ousadia e ação. No primeiro filme, ele já aparece fortemente ligado ao funcionamento do Labirinto e ao papel de Runner. Ao longo da trilogia, continua sendo uma energia de linha de frente, coragem e atitude.",
+        tags: ["velocidade", "ação", "ousadia", "runner"],
+        films: "1 • 2 • 3"
+      },
+      {
+        id: "gally",
+        name: "Gally",
+        actor: "Will Poulter",
+        initials: "G",
+        role: "Força de oposição",
+        bio: "Gally tem uma presença intensa e muitas vezes conflituosa. Ele funciona como resistência ao caos que Thomas traz para a Clareira e ajuda a mostrar como medo, ordem e desconfiança também moldam o grupo. É um personagem de impacto forte.",
+        tags: ["conflito", "teimosia", "presença", "pressão"],
+        films: "1 • 3"
+      },
+      {
+        id: "brenda",
+        name: "Brenda",
+        actor: "Rosa Salazar",
+        initials: "B",
+        role: "Sobrevivente intensa",
+        bio: "Brenda ganha destaque a partir da fase externa da história. Ela traz energia de sobrevivência, atitude, rapidez e firmeza. É uma personagem que funciona muito bem em cenários instáveis, com coragem mais prática do que teórica.",
+        tags: ["sobrevivência", "intensidade", "ação", "firmeza"],
+        films: "2 • 3"
+      },
+      {
+        id: "jorge",
+        name: "Jorge",
+        actor: "Giancarlo Esposito",
+        initials: "J",
+        role: "Líder experiente",
+        bio: "Jorge entra como uma figura experiente e forte, com energia de comando e leitura de perigo. Ele ajuda a ampliar o universo da trilogia e traz uma presença de liderança mais endurecida pela realidade externa.",
+        tags: ["liderança", "experiência", "proteção", "mundo externo"],
+        films: "2 • 3"
+      }
+    ];
+
+    const surviveQuestions = {
+      1: [
+        { q: "Você chega à Clareira sem memória. Qual seria sua primeira atitude?", a: [
+          { t: "Observar as regras e tentar entender o lugar", v: 2 },
+          { t: "Sair correndo sem plano", v: 0 },
+          { t: "Tentar identificar quem parece confiável", v: 2 },
+          { t: "Desafiar todo mundo de imediato", v: 1 }
+        ]},
+        { q: "As portas vão se fechar em pouco tempo. Você...", a: [
+          { t: "Evita entrar sem estratégia", v: 2 },
+          { t: "Vai pelo impulso", v: 0 },
+          { t: "Só entraria com um plano e companhia certa", v: 2 },
+          { t: "Segue alguém sem pensar muito", v: 1 }
+        ]},
+        { q: "No grupo, seu maior trunfo seria...", a: [
+          { t: "Percepção", v: 2 },
+          { t: "Coragem sem direção", v: 0 },
+          { t: "Leitura das pessoas", v: 2 },
+          { t: "Achar que tudo se resolve sozinho", v: 0 }
+        ]},
+        { q: "Diante de uma ideia arriscada, você...", a: [
+          { t: "Analisa antes", v: 2 },
+          { t: "Aceita pela emoção", v: 0 },
+          { t: "Questiona os riscos", v: 2 },
+          { t: "Vai porque parece emocionante", v: 0 }
+        ]},
+        { q: "Seu maior erro provável seria...", a: [
+          { t: "Confiar tarde demais", v: 1 },
+          { t: "Agir cedo demais", v: 0 },
+          { t: "Carregar tudo sozinha", v: 1 },
+          { t: "Ignorar sinais óbvios", v: 0 }
+        ]},
+        { q: "No fim do primeiro filme, você teria mais chance se...", a: [
+          { t: "Mantivesse calma e estratégia", v: 2 },
+          { t: "Agisse só por impulso", v: 0 },
+          { t: "Escolhesse bem em quem confiar", v: 2 },
+          { t: "Tentasse resolver tudo sem apoio", v: 0 }
+        ]}
+      ],
+      2: [
+        { q: "Num cenário instável e hostil, sua prioridade seria...", a: [
+          { t: "Mapear saídas e recursos", v: 2 },
+          { t: "Ir sem olhar muito", v: 0 },
+          { t: "Ficar perto de gente confiável", v: 2 },
+          { t: "Desistir mentalmente", v: 0 }
+        ]},
+        { q: "Quando tudo muda de repente, você...", a: [
+          { t: "Se adapta e observa", v: 2 },
+          { t: "Age no susto", v: 0 },
+          { t: "Tenta ler o novo ambiente", v: 2 },
+          { t: "Ignora os sinais", v: 0 }
+        ]},
+        { q: "Seu jeito de sobreviver seria mais...", a: [
+          { t: "Estratégico", v: 2 },
+          { t: "Caótico", v: 0 },
+          { t: "Resistente", v: 2 },
+          { t: "Curioso demais", v: 1 }
+        ]},
+        { q: "Se o grupo estiver cansado e tenso, você...", a: [
+          { t: "Ajuda a manter foco", v: 2 },
+          { t: "Se perde no drama", v: 0 },
+          { t: "Pensa no próximo passo", v: 2 },
+          { t: "Vai sem plano", v: 0 }
+        ]},
+        { q: "Sua vantagem seria...", a: [
+          { t: "Disciplina", v: 2 },
+          { t: "Teimosia", v: 0 },
+          { t: "Percepção", v: 2 },
+          { t: "Sorte apenas", v: 1 }
+        ]},
+        { q: "Você teria mais chance porque...", a: [
+          { t: "Sabe recuar na hora certa", v: 2 },
+          { t: "Não ignora perigo", v: 2 },
+          { t: "Vai só pela adrenalina", v: 0 },
+          { t: "Confia demais em improviso", v: 0 }
+        ]}
+      ],
+      3: [
+        { q: "Quando tudo fica pessoal e emocional, você...", a: [
+          { t: "Tenta manter foco mesmo sentindo tudo", v: 2 },
+          { t: "Desaba e esquece o plano", v: 0 },
+          { t: "Se apoia na lealdade do grupo", v: 2 },
+          { t: "Age só pelo coração", v: 1 }
+        ]},
+        { q: "Num resgate arriscado, você seria...", a: [
+          { t: "A que pensa antes de agir", v: 2 },
+          { t: "A que corre sem estratégia", v: 0 },
+          { t: "A que protege os outros com inteligência", v: 2 },
+          { t: "A que improvisa demais", v: 1 }
+        ]},
+        { q: "Seu maior valor no final seria...", a: [
+          { t: "Lealdade", v: 2 },
+          { t: "Orgulho", v: 0 },
+          { t: "Persistência emocional", v: 2 },
+          { t: "Impulsividade", v: 0 }
+        ]},
+        { q: "Se o grupo depender de você, você...", a: [
+          { t: "Assume responsabilidade", v: 2 },
+          { t: "Trava na hora", v: 0 },
+          { t: "Pensa em todos, não só em si", v: 2 },
+          { t: "Vai no acaso", v: 0 }
+        ]},
+        { q: "Em momentos difíceis, sua principal força seria...", a: [
+          { t: "Persistência", v: 2 },
+          { t: "Coragem sem direção", v: 0 },
+          { t: "Capacidade de continuar cansada", v: 2 },
+          { t: "Drama puro", v: 0 }
+        ]},
+        { q: "No final, você teria mais chance porque...", a: [
+          { t: "Equilibra emoção e estratégia", v: 2 },
+          { t: "Luta sem pensar nas consequências", v: 0 },
+          { t: "Consegue seguir apesar da pressão", v: 2 },
+          { t: "Age só por impulso", v: 0 }
+        ]}
+      ]
+    };
+
+    const personalityQuestions = {
+      1: [
+        { q: "Na Clareira, sua energia seria mais...", a: [
+          { t: "Curiosa e forte", type: "leader" },
+          { t: "Calma e perceptiva", type: "heart" },
+          { t: "Rápida e ousada", type: "runner" },
+          { t: "Misteriosa e estratégica", type: "mind" }
+        ]},
+        { q: "Você prefere ser vista como...", a: [
+          { t: "A que puxa o grupo pra frente", type: "leader" },
+          { t: "A que mantém humanidade", type: "heart" },
+          { t: "A mais ágil", type: "runner" },
+          { t: "A mente afiada", type: "mind" }
+        ]},
+        { q: "Seu papel emocional seria...", a: [
+          { t: "Dar coragem", type: "leader" },
+          { t: "Ser apoio real", type: "heart" },
+          { t: "Trazer ação", type: "runner" },
+          { t: "Ler a situação", type: "mind" }
+        ]},
+        { q: "Qual frase combina mais com você?", a: [
+          { t: "Vamos achar uma saída.", type: "leader" },
+          { t: "Ninguém fica pra trás.", type: "heart" },
+          { t: "Eu vou primeiro.", type: "runner" },
+          { t: "Tem algo escondido aqui.", type: "mind" }
+        ]},
+        { q: "No grupo você seria...", a: [
+          { t: "Referência", type: "leader" },
+          { t: "Equilíbrio", type: "heart" },
+          { t: "Impulso de movimento", type: "runner" },
+          { t: "Estratégia", type: "mind" }
+        ]},
+        { q: "Seu brilho principal seria...", a: [
+          { t: "Coragem", type: "leader" },
+          { t: "Lealdade", type: "heart" },
+          { t: "Velocidade", type: "runner" },
+          { t: "Inteligência", type: "mind" }
+        ]}
+      ],
+      2: [
+        { q: "Num mundo mais instável, você seria...", a: [
+          { t: "A que mantém a direção", type: "leader" },
+          { t: "A que cuida do grupo", type: "heart" },
+          { t: "A que age rápido", type: "runner" },
+          { t: "A que percebe padrões", type: "mind" }
+        ]},
+        { q: "Sua marca nesse filme seria...", a: [
+          { t: "Força pra continuar", type: "leader" },
+          { t: "Calor humano", type: "heart" },
+          { t: "Instinto de sobrevivência", type: "runner" },
+          { t: "Pensamento estratégico", type: "mind" }
+        ]},
+        { q: "Você ajuda mais com...", a: [
+          { t: "Iniciativa", type: "leader" },
+          { t: "Conexão", type: "heart" },
+          { t: "Agilidade", type: "runner" },
+          { t: "Leitura do ambiente", type: "mind" }
+        ]},
+        { q: "Qual energia mais te define?", a: [
+          { t: "Resistente", type: "leader" },
+          { t: "Afetuosa", type: "heart" },
+          { t: "Intensa", type: "runner" },
+          { t: "Analítica", type: "mind" }
+        ]},
+        { q: "Você prefere ser lembrada como...", a: [
+          { t: "Quem sustentou o grupo", type: "leader" },
+          { t: "Quem trouxe luz", type: "heart" },
+          { t: "Quem se moveu sem medo", type: "runner" },
+          { t: "Quem entendeu cedo", type: "mind" }
+        ]},
+        { q: "Seu jeito sob pressão é...", a: [
+          { t: "Assumir o comando", type: "leader" },
+          { t: "Tentar unir todos", type: "heart" },
+          { t: "Agir na hora", type: "runner" },
+          { t: "Pensar antes", type: "mind" }
+        ]}
+      ],
+      3: [
+        { q: "No filme final, sua energia seria mais...", a: [
+          { t: "Heroica", type: "leader" },
+          { t: "Leal", type: "heart" },
+          { t: "Destemida", type: "runner" },
+          { t: "Estratégica", type: "mind" }
+        ]},
+        { q: "Quando tudo aperta, você...", a: [
+          { t: "Segue em frente", type: "leader" },
+          { t: "Pensa em quem ama", type: "heart" },
+          { t: "Age rápido", type: "runner" },
+          { t: "Lê a situação inteira", type: "mind" }
+        ]},
+        { q: "Sua presença no grupo seria...", a: [
+          { t: "Central", type: "leader" },
+          { t: "Essencial emocionalmente", type: "heart" },
+          { t: "Cheia de energia", type: "runner" },
+          { t: "Importante nas decisões", type: "mind" }
+        ]},
+        { q: "Você quer ser vista como...", a: [
+          { t: "Líder nata", type: "leader" },
+          { t: "Pessoa de confiança", type: "heart" },
+          { t: "Força em movimento", type: "runner" },
+          { t: "Mente brilhante", type: "mind" }
+        ]},
+        { q: "Qual frase mais combina com você?", a: [
+          { t: "A gente termina isso.", type: "leader" },
+          { t: "Eu continuo por eles.", type: "heart" },
+          { t: "Me dá espaço que eu resolvo.", type: "runner" },
+          { t: "Tem um jeito melhor de fazer isso.", type: "mind" }
+        ]},
+        { q: "Seu legado seria...", a: [
+          { t: "Conduzir", type: "leader" },
+          { t: "Conectar", type: "heart" },
+          { t: "Impulsionar", type: "runner" },
+          { t: "Planejar", type: "mind" }
+        ]}
+      ]
+    };
+
+    const roleQuestions = {
+      1: [
+        { q: "Na Clareira, você naturalmente iria para qual tipo de tarefa?", a: [
+          { t: "Organizar pessoas e decisões", type: "chief" },
+          { t: "Correr e explorar", type: "runner" },
+          { t: "Cuidar da base e do bem-estar", type: "keeper" },
+          { t: "Analisar mapas e padrões", type: "strategist" }
+        ]},
+        { q: "O grupo precisando de você, seu maior valor seria...", a: [
+          { t: "Comando", type: "chief" },
+          { t: "Velocidade", type: "runner" },
+          { t: "Estabilidade", type: "keeper" },
+          { t: "Planejamento", type: "strategist" }
+        ]},
+        { q: "Você prefere trabalhar...", a: [
+          { t: "Na frente do grupo", type: "chief" },
+          { t: "Em movimento", type: "runner" },
+          { t: "Mantendo tudo funcionando", type: "keeper" },
+          { t: "Pensando no sistema", type: "strategist" }
+        ]},
+        { q: "Sua importância seria...", a: [
+          { t: "Dar direção", type: "chief" },
+          { t: "Levar ação", type: "runner" },
+          { t: "Sustentar a rotina", type: "keeper" },
+          { t: "Encontrar respostas", type: "strategist" }
+        ]},
+        { q: "O que mais combina com você?", a: [
+          { t: "Autoridade tranquila", type: "chief" },
+          { t: "Agilidade", type: "runner" },
+          { t: "Confiabilidade", type: "keeper" },
+          { t: "Inteligência fria", type: "strategist" }
+        ]},
+        { q: "No fim, você seria...", a: [
+          { t: "Líder da Clareira", type: "chief" },
+          { t: "Runner principal", type: "runner" },
+          { t: "Base emocional e prática", type: "keeper" },
+          { t: "Estrategista do grupo", type: "strategist" }
+        ]}
+      ],
+      2: [
+        { q: "Num cenário mais hostil, você ajudaria mais...", a: [
+          { t: "Guiando decisões", type: "chief" },
+          { t: "Abrindo caminho", type: "runner" },
+          { t: "Mantendo o grupo unido", type: "keeper" },
+          { t: "Lendo riscos e padrões", type: "strategist" }
+        ]},
+        { q: "Sua função ideal seria...", a: [
+          { t: "Comandar", type: "chief" },
+          { t: "Explorar", type: "runner" },
+          { t: "Acolher e estabilizar", type: "keeper" },
+          { t: "Planejar", type: "strategist" }
+        ]},
+        { q: "Seu talento mais útil seria...", a: [
+          { t: "Presença", type: "chief" },
+          { t: "Rapidez", type: "runner" },
+          { t: "Equilíbrio", type: "keeper" },
+          { t: "Percepção", type: "strategist" }
+        ]},
+        { q: "No meio do caos, você...", a: [
+          { t: "Assume a frente", type: "chief" },
+          { t: "Vai testar o caminho", type: "runner" },
+          { t: "Segura a base", type: "keeper" },
+          { t: "Pensa antes do grupo agir", type: "strategist" }
+        ]},
+        { q: "O grupo precisa mais de você por quê?", a: [
+          { t: "Você guia", type: "chief" },
+          { t: "Você se move", type: "runner" },
+          { t: "Você sustenta", type: "keeper" },
+          { t: "Você entende", type: "strategist" }
+        ]},
+        { q: "Seu lugar natural seria...", a: [
+          { t: "Na liderança", type: "chief" },
+          { t: "Na linha de frente", type: "runner" },
+          { t: "No coração do grupo", type: "keeper" },
+          { t: "Na mente do plano", type: "strategist" }
+        ]}
+      ],
+      3: [
+        { q: "No filme final, sua função mais forte seria...", a: [
+          { t: "Liderar decisões difíceis", type: "chief" },
+          { t: "Executar ações arriscadas", type: "runner" },
+          { t: "Manter as pessoas unidas", type: "keeper" },
+          { t: "Criar a melhor estratégia", type: "strategist" }
+        ]},
+        { q: "Sob pressão, você entrega mais...", a: [
+          { t: "Comando", type: "chief" },
+          { t: "Coragem em movimento", type: "runner" },
+          { t: "Resistência emocional", type: "keeper" },
+          { t: "Clareza mental", type: "strategist" }
+        ]},
+        { q: "Quando tudo depende do grupo, você...", a: [
+          { t: "Decide", type: "chief" },
+          { t: "Age", type: "runner" },
+          { t: "Ampara", type: "keeper" },
+          { t: "Planeja", type: "strategist" }
+        ]},
+        { q: "Sua importância seria mais...", a: [
+          { t: "Liderança", type: "chief" },
+          { t: "Ação e deslocamento", type: "runner" },
+          { t: "Humanidade e apoio", type: "keeper" },
+          { t: "Estratégia e visão", type: "strategist" }
+        ]},
+        { q: "Qual palavra mais te define?", a: [
+          { t: "Autoridade", type: "chief" },
+          { t: "Impulso", type: "runner" },
+          { t: "Lealdade", type: "keeper" },
+          { t: "Lógica", type: "strategist" }
+        ]},
+        { q: "Seu título no fim seria...", a: [
+          { t: "Comandante", type: "chief" },
+          { t: "Corredora de elite", type: "runner" },
+          { t: "Guardião do grupo", type: "keeper" },
+          { t: "Mestre do plano", type: "strategist" }
+        ]}
+      ]
+    };
+
+    const surviveResults = [
+      {
+        min: 10,
+        title: "Você provavelmente sobreviveria",
+        icon: "🌿",
+        text: "Você tem leitura de ambiente, adaptação e boa noção de risco. Sua maior força é equilibrar coragem com cabeça fria.",
+        traits: ["adaptável", "estratégica", "atenta", "resistente"]
+      },
+      {
+        min: 6,
+        title: "Você teria boas chances",
+        icon: "🧭",
+        text: "Você tem instinto e potencial, mas em alguns momentos a emoção pode te empurrar para riscos maiores. Ainda assim, sua chance seria real.",
+        traits: ["intuitiva", "corajosa", "intensa", "promissora"]
+      },
+      {
+        min: 0,
+        title: "Você precisaria de mais apoio do grupo",
+        icon: "⚠️",
+        text: "Seu impulso, curiosidade ou teimosia podem atrapalhar em cenários extremos. Sua melhor saída seria respirar antes de agir.",
+        traits: ["impulsiva", "ousada", "emocional", "imprevisível"]
+      }
+    ];
+
+    const personalityResults = {
+      leader: {
+        title: "Seu perfil: Energia de liderança",
+        icon: "👑",
+        text: "Você tem presença de protagonista, força para puxar decisões e aquela energia que move o grupo quando tudo parece travado.",
+        traits: ["líder", "forte", "protagonista", "decisiva"]
+      },
+      heart: {
+        title: "Seu perfil: Coração do grupo",
+        icon: "🤍",
+        text: "Você seria a pessoa que mantém humanidade, lealdade e vínculo real no meio do caos. Sua presença traz equilíbrio emocional.",
+        traits: ["leal", "afetuosa", "essencial", "sensível"]
+      },
+      runner: {
+        title: "Seu perfil: Energia de runner",
+        icon: "⚡",
+        text: "Você combina com movimento, ousadia e ação. Seu brilho aparece quando é hora de se mover rápido e enfrentar o perigo.",
+        traits: ["rápida", "destemida", "ativa", "intensa"]
+      },
+      mind: {
+        title: "Seu perfil: Mente estratégica",
+        icon: "🧠",
+        text: "Você repara em padrões, lê situações e pensa em saídas antes dos outros. Seu poder está em entender o tabuleiro inteiro.",
+        traits: ["estratégica", "analítica", "perspicaz", "observadora"]
+      }
+    };
+
+    const roleResults = {
+      chief: {
+        title: "Sua função seria: liderança da base",
+        icon: "🏹",
+        text: "Você teria perfil de comando, organização e decisão. Seria alguém importante para dar direção ao grupo quando tudo fica incerto.",
+        traits: ["comando", "presença", "decisão", "autoridade"]
+      },
+      runner: {
+        title: "Sua função seria: runner principal",
+        icon: "🏃",
+        text: "Você teria a energia certa para explorar, agir rápido e lidar com pressão em movimento. Sua utilidade estaria na linha de frente.",
+        traits: ["velocidade", "ação", "ousadia", "movimento"]
+      },
+      keeper: {
+        title: "Sua função seria: guardiã do grupo",
+        icon: "🫶",
+        text: "Você seria vital para sustentar as pessoas, a rotina e a parte emocional da base. O grupo te veria como confiança real.",
+        traits: ["apoio", "equilíbrio", "lealdade", "base"]
+      },
+      strategist: {
+        title: "Sua função seria: estrategista",
+        icon: "🗺️",
+        text: "Você teria talento para montar planos, ler padrões e prever problemas antes deles crescerem. Sua força estaria na visão de conjunto.",
+        traits: ["plano", "lógica", "visão", "inteligência"]
+      }
+    };
+
+    let selectedFilm = 1;
+    let selectedMode = "survive";
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let surviveScore = 0;
+    let personalityScore = { leader:0, heart:0, runner:0, mind:0 };
+    let roleScore = { chief:0, runner:0, keeper:0, strategist:0 };
+
+    const filmOptions = document.getElementById("filmOptions");
+    const modeOptions = document.getElementById("modeOptions");
+    const filmPreview = document.getElementById("filmPreview");
+
+    const setupScreen = document.getElementById("setupScreen");
+    const quizScreen = document.getElementById("quizScreen");
+    const resultScreen = document.getElementById("resultScreen");
+
+    const questionCounter = document.getElementById("questionCounter");
+    const modeLabel = document.getElementById("modeLabel");
+    const progressBar = document.getElementById("progressBar");
+    const filmBox = document.getElementById("filmBox");
+    const questionText = document.getElementById("questionText");
+    const answersBox = document.getElementById("answersBox");
+
+    const resultIcon = document.getElementById("resultIcon");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultText = document.getElementById("resultText");
+    const traitsBox = document.getElementById("traitsBox");
+
+    const castGrid = document.getElementById("castGrid");
+    const bioPanel = document.getElementById("bioPanel");
+
+    function buildFilmOptions(){
+      filmOptions.innerHTML = "";
+      Object.keys(films).forEach(key => {
+        const btn = document.createElement("button");
+        btn.className = "choice" + (Number(key) === selectedFilm ? " active" : "");
+        btn.textContent = films[key].name;
+        btn.onclick = () => {
+          selectedFilm = Number(key);
+          buildFilmOptions();
+          updatePreview();
+        };
+        filmOptions.appendChild(btn);
+      });
+      updatePreview();
+    }
+
+    function setupModeSelection(){
+      const buttons = modeOptions.querySelectorAll(".choice");
+      buttons.forEach(btn => {
+        btn.onclick = () => {
+          buttons.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          selectedMode = btn.dataset.mode;
+          updatePreview();
+        };
+      });
+    }
+
+    function updatePreview(){
+      const modeText = {
+        survive: "Você sobreviveria?",
+        personality: "Seu perfil no universo Maze Runner",
+        role: "Qual seria sua função no grupo?"
+      };
+
+      filmPreview.innerHTML =
+        "<strong>" + films[selectedFilm].name + "</strong><br><br>" +
+        films[selectedFilm].description +
+        "<br><br><strong>Modo atual:</strong> " + modeText[selectedMode];
+    }
+
+    function randomizeChoices(){
+      selectedFilm = Math.floor(Math.random() * 3) + 1;
+      const modes = ["survive", "personality", "role"];
+      selectedMode = modes[Math.floor(Math.random() * modes.length)];
+
+      buildFilmOptions();
+
+      const buttons = modeOptions.querySelectorAll(".choice");
+      buttons.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === selectedMode);
+      });
+
+      updatePreview();
+    }
+
+    function startGame(){
+      currentIndex = 0;
+      surviveScore = 0;
+      personalityScore = { leader:0, heart:0, runner:0, mind:0 };
+      roleScore = { chief:0, runner:0, keeper:0, strategist:0 };
+
+      if(selectedMode === "survive"){
+        currentQuestions = surviveQuestions[selectedFilm];
+        modeLabel.textContent = "Modo: Você sobreviveria?";
+      } else if(selectedMode === "personality"){
+        currentQuestions = personalityQuestions[selectedFilm];
+        modeLabel.textContent = "Modo: Seu perfil no universo Maze Runner";
+      } else {
+        currentQuestions = roleQuestions[selectedFilm];
+        modeLabel.textContent = "Modo: Qual seria sua função no grupo?";
+      }
+
+      setupScreen.style.display = "none";
+      resultScreen.style.display = "none";
+      quizScreen.style.display = "block";
+
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      const item = currentQuestions[currentIndex];
+      questionCounter.textContent = "Pergunta " + (currentIndex + 1) + " de " + currentQuestions.length;
+      progressBar.style.width = ((currentIndex / currentQuestions.length) * 100) + "%";
+
+      filmBox.innerHTML = "<strong>" + films[selectedFilm].name + "</strong><br>" + films[selectedFilm].description;
+      questionText.textContent = item.q;
+      answersBox.innerHTML = "";
+
+      item.a.forEach(option => {
+        const btn = document.createElement("button");
+        btn.textContent = option.t;
+        btn.onclick = () => answerQuestion(option);
+        answersBox.appendChild(btn);
+      });
+    }
+
+    function answerQuestion(option){
+      if(selectedMode === "survive"){
+        surviveScore += option.v;
+      } else if(selectedMode === "personality"){
+        personalityScore[option.type]++;
+      } else {
+        roleScore[option.type]++;
+      }
+
+      currentIndex++;
+
+      if(currentIndex < currentQuestions.length){
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    }
+
+    function showResult(){
+      quizScreen.style.display = "none";
+      resultScreen.style.display = "block";
+      progressBar.style.width = "100%";
+
+      let finalResult;
+
+      if(selectedMode === "survive"){
+        finalResult = surviveResults.find(r => surviveScore >= r.min);
+      } else if(selectedMode === "personality"){
+        const winner = Object.keys(personalityScore).reduce((a, b) =>
+          personalityScore[a] >= personalityScore[b] ? a : b
+        );
+        finalResult = personalityResults[winner];
+      } else {
+        const winner = Object.keys(roleScore).reduce((a, b) =>
+          roleScore[a] >= roleScore[b] ? a : b
+        );
+        finalResult = roleResults[winner];
+      }
+
+      resultIcon.textContent = finalResult.icon;
+      resultTitle.textContent = finalResult.title;
+      resultText.textContent = finalResult.text + " Em " + films[selectedFilm].short + ", essa seria a sua energia dominante.";
+      traitsBox.innerHTML = "";
+
+      finalResult.traits.forEach(trait => {
+        const div = document.createElement("div");
+        div.className = "trait";
+        div.textContent = trait;
+        traitsBox.appendChild(div);
+      });
+    }
+
+    function backToMenu(){
+      quizScreen.style.display = "none";
+      resultScreen.style.display = "none";
+      setupScreen.style.display = "block";
+    }
+
+    function restartAll(){
+      quizScreen.style.display = "none";
+      resultScreen.style.display = "none";
+      setupScreen.style.display = "block";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function copyResult(){
+      const traits = Array.from(document.querySelectorAll(".trait"))
+        .map(el => el.textContent)
+        .join(", ");
+
+      const text =
+        resultTitle.textContent + "\\n" +
+        resultText.textContent + "\\n" +
+        "Traços: " + traits;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Resultado copiado!");
+      }).catch(() => {
+        alert("Não consegui copiar automaticamente.");
+      });
+    }
+
+    function scrollToBios(){
+      document.getElementById("biosSection").scrollIntoView({ behavior:"smooth", block:"start" });
+    }
+
+    function buildCastCards(){
+      castGrid.innerHTML = "";
+      characters.forEach(char => {
+        const card = document.createElement("div");
+        card.className = "cast-card";
+        card.onclick = () => openBio(char.id);
+
+        card.innerHTML = `
+          <div class="cast-photo">
+            <div class="photo-circle">${char.initials}</div>
+          </div>
+          <div class="cast-info">
+            <div class="cast-name">${char.name}</div>
+            <div class="cast-role">${char.actor} • ${char.role}</div>
+          </div>
+        `;
+
+        castGrid.appendChild(card);
+      });
+    }
+
+    function openBio(id){
+      const char = characters.find(c => c.id === id);
+      if(!char) return;
+
+      bioPanel.innerHTML = `
+        <h4>${char.name}</h4>
+        <div class="bio-meta">${char.actor} • ${char.role} • Destaque nos filmes: ${char.films}</div>
+        <div class="bio-text">${char.bio}</div>
+        <div class="bio-tags">
+          ${char.tags.map(tag => `<span class="bio-tag">${tag}</span>`).join("")}
+        </div>
+      `;
+    }
+
+    buildFilmOptions();
+    setupModeSelection();
+    buildCastCards();
+  </script>
+</body>
+</html>
